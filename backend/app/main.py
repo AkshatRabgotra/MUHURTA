@@ -40,20 +40,19 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     setup_logging()
     logger.info("Starting Muhurta Planner API", env=settings.ENV, llm_provider=settings.LLM_PROVIDER)
 
-    # Initialize tables if dev or test
-    if settings.ENV in ("dev", "test"):
-        try:
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-                # Ensure password_hash exists on users table
-                try:
-                    from sqlalchemy import text
-                    await conn.execute(text("ALTER TABLE users ADD COLUMN password_hash VARCHAR(255)"))
-                except Exception:
-                    pass  # column already exists
-            logger.info("Database tables verified/created")
-        except Exception as exc:
-            logger.warning("Could not automatically create tables at startup", error=str(exc))
+    # Ensure database tables exist across all environments
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            # Ensure password_hash exists on users table
+            try:
+                from sqlalchemy import text
+                await conn.execute(text("ALTER TABLE users ADD COLUMN password_hash VARCHAR(255)"))
+            except Exception:
+                pass  # column already exists
+        logger.info("Database tables verified/created successfully")
+    except Exception as exc:
+        logger.error("Could not automatically create tables at startup", error=str(exc))
 
     # Start Telegram Bot polling worker
     bot_task: asyncio.Task | None = None

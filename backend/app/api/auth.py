@@ -142,82 +142,94 @@ async def google_callback(
         "grant_type": "authorization_code",
     }
 
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        token_resp = await client.post(token_url, data=token_data)
-        if token_resp.status_code != 200:
-            raise AppError(
-                code=ErrorCode.BAD_REQUEST,
-                message=f"Google token exchange failed: {token_resp.text}",
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            token_resp = await client.post(token_url, data=token_data)
+            if token_resp.status_code != 200:
+                logger.warning("Google token exchange returned non-200", status=token_resp.status_code, body=token_resp.text)
+                return RedirectResponse(
+                    url=f"{settings.FRONTEND_URL}/login?error=Google+login+session+expired.+Please+try+again.",
+                    status_code=303,
+                )
+            tokens = token_resp.json()
+            access_token = tokens.get("access_token")
+            refresh_token = tokens.get("refresh_token", "")
+
+            # Fetch user info
+            userinfo_resp = await client.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"},
             )
-        tokens = token_resp.json()
-        access_token = tokens["access_token"]
-        refresh_token = tokens.get("refresh_token", "")
+            if userinfo_resp.status_code != 200:
+                return RedirectResponse(
+                    url=f"{settings.FRONTEND_URL}/login?error=Failed+to+fetch+Google+profile.+Please+try+again.",
+                    status_code=303,
+                )
+            profile = userinfo_resp.json()
 
-        # Fetch user info
-        userinfo_resp = await client.get(
-            "https://www.googleapis.com/oauth2/v3/userinfo",
-            headers={"Authorization": f"Bearer {access_token}"},
+        google_sub = profile.get("sub")
+        email = profile.get("email")
+        name = profile.get("name", "")
+
+        # Upsert user
+        q = select(User).where((User.google_sub == google_sub) | (User.email == email))
+        res = await db.execute(q)
+        user = res.scalar_one_or_none()
+
+        if not user:
+            user = User(
+                id=uuid.uuid4(),
+                email=email,
+                name=name,
+                google_sub=google_sub,
+                timezone="Asia/Kolkata",
+            )
+            db.add(user)
+            await db.flush()
+        else:
+            user.google_sub = google_sub
+            if name and not user.name:
+                user.name = name
+
+        # Store encrypted tokens
+        token_q = select(GoogleToken).where(GoogleToken.user_id == user.id)
+        token_res = await db.execute(token_q)
+        gt = token_res.scalar_one_or_none()
+        if not gt:
+            gt = GoogleToken(
+                user_id=user.id,
+                access_token_enc=encrypt_token(access_token or ""),
+                refresh_token_enc=encrypt_token(refresh_token or ""),
+                scopes=tokens.get("scope", ""),
+            )
+            db.add(gt)
+        else:
+            gt.access_token_enc = encrypt_token(access_token or "")
+            if refresh_token:
+                gt.refresh_token_enc = encrypt_token(refresh_token)
+            gt.scopes = tokens.get("scope", "")
+
+        await db.commit()
+
+        # Issue JWT session cookie
+        jwt_token = create_access_token({"sub": str(user.id), "email": user.email})
+        redirect_target = f"{settings.FRONTEND_URL}/planner?token={jwt_token}"
+        resp = RedirectResponse(url=redirect_target, status_code=303)
+        resp.set_cookie(
+            key=COOKIE_NAME,
+            value=jwt_token,
+            httponly=True,
+            samesite="none" if settings.ENV != "dev" else "lax",
+            secure=(settings.ENV != "dev"),
         )
-        if userinfo_resp.status_code != 200:
-            raise AppError(code=ErrorCode.BAD_REQUEST, message="Failed to fetch Google profile.")
-        profile = userinfo_resp.json()
+        return resp
 
-    google_sub = profile.get("sub")
-    email = profile.get("email")
-    name = profile.get("name", "")
-
-    # Upsert user
-    q = select(User).where((User.google_sub == google_sub) | (User.email == email))
-    res = await db.execute(q)
-    user = res.scalar_one_or_none()
-
-    if not user:
-        user = User(
-            id=uuid.uuid4(),
-            email=email,
-            name=name,
-            google_sub=google_sub,
-            timezone="Asia/Kolkata",
+    except Exception as exc:
+        logger.exception("Unexpected error during Google callback", error=str(exc))
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/login?error=Authentication+failed.+Please+try+again.",
+            status_code=303,
         )
-        db.add(user)
-        await db.flush()
-    else:
-        user.google_sub = google_sub
-        if name and not user.name:
-            user.name = name
-
-    # Store encrypted tokens
-    token_q = select(GoogleToken).where(GoogleToken.user_id == user.id)
-    token_res = await db.execute(token_q)
-    gt = token_res.scalar_one_or_none()
-    if not gt:
-        gt = GoogleToken(
-            user_id=user.id,
-            access_token_enc=encrypt_token(access_token),
-            refresh_token_enc=encrypt_token(refresh_token),
-            scopes=tokens.get("scope", ""),
-        )
-        db.add(gt)
-    else:
-        gt.access_token_enc = encrypt_token(access_token)
-        if refresh_token:
-            gt.refresh_token_enc = encrypt_token(refresh_token)
-        gt.scopes = tokens.get("scope", "")
-
-    await db.commit()
-
-    # Issue JWT session cookie
-    jwt_token = create_access_token({"sub": str(user.id), "email": user.email})
-    redirect_target = f"{settings.FRONTEND_URL}/planner?token={jwt_token}"
-    resp = RedirectResponse(url=redirect_target, status_code=303)
-    resp.set_cookie(
-        key=COOKIE_NAME,
-        value=jwt_token,
-        httponly=True,
-        samesite="none" if settings.ENV != "dev" else "lax",
-        secure=(settings.ENV != "dev"),
-    )
-    return resp
 
 
 @router.post("/auth/register")
