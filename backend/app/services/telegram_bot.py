@@ -264,6 +264,13 @@ async def run_telegram_bot_polling() -> None:
         logger.info("Telegram bot token not configured; polling disabled.")
         return
 
+    # Clear any residual webhooks to ensure polling can run cleanly
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            await client.post(f"{TELEGRAM_API_BASE}{token}/deleteWebhook")
+    except Exception:
+        pass
+
     logger.info("Starting Telegram Bot long-polling worker...")
     offset = 0
 
@@ -283,6 +290,8 @@ async def run_telegram_bot_polling() -> None:
                             # Handle each update safely in background
                             asyncio.create_task(handle_update(u))
                 elif resp.status_code == 409:
+                    logger.warning("Telegram conflict (409): ensure only 1 uvicorn worker is running (--workers 1). Backing off.")
+                    await asyncio.sleep(12)
                     logger.warning("Telegram conflict: webhook may be active or another polling instance running.")
                     await asyncio.sleep(5)
                 else:
