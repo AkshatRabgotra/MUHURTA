@@ -40,10 +40,11 @@ const POPULAR_ACTIVITIES = [
 ];
 
 const PILLARS = [
-  { name: 'Tithi', subtitle: 'Lunar Phase', desc: 'Calculates the exact 12° longitudinal separation of Moon and Sun.', icon: '🌓' },
-  { name: 'Nakshatra', subtitle: 'Lunar Mansion', desc: 'Categorized by classical disposition: Dhruva, Kshipra, Mridu.', icon: '✨' },
-  { name: 'Vara', subtitle: 'Solar Weekday', desc: 'Harmonizes the governing planetary lord with the activity.', icon: '☀️' },
-  { name: 'Yoga & Karana', subtitle: 'Conjunction & Half-Tithi', desc: 'Auspicious solar-lunar angles filtering obstacles like Vishti.', icon: '☸️' },
+  { name: 'Tithi', subtitle: 'Lunar Day (12° Phase)', desc: 'Moon-Sun separation defining Shukla and Krishna Pakshas.', icon: '🌓' },
+  { name: 'Vara', subtitle: 'Solar Weekday', desc: 'Planetary ruler of the solar day harmonized with the activity.', icon: '☀️' },
+  { name: 'Nakshatra', subtitle: 'Lunar Mansion (27)', desc: 'Disposition of stars: Dhruva, Chara, Mridu, and Kshipra.', icon: '✨' },
+  { name: 'Yoga', subtitle: 'Luni-Solar Angle', desc: '27 combined longitudes fostering success (Amrita, Siddhi).', icon: '☸️' },
+  { name: 'Karana', subtitle: 'Half-Tithi (6°)', desc: 'Micro-timing units filtering obstacles like Vishti Bhadra.', icon: '⏳' },
 ];
 
 export default function HomePage() {
@@ -151,7 +152,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
           {PILLARS.map((p, idx) => (
             <div
               key={idx}
