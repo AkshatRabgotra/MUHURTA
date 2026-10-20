@@ -208,13 +208,13 @@ async def google_callback(
 
     # Issue JWT session cookie
     jwt_token = create_access_token({"sub": str(user.id), "email": user.email})
-    redirect_target = f"{settings.FRONTEND_URL}/"
+    redirect_target = f"{settings.FRONTEND_URL}/planner?token={jwt_token}"
     resp = RedirectResponse(url=redirect_target, status_code=303)
     resp.set_cookie(
         key=COOKIE_NAME,
         value=jwt_token,
         httponly=True,
-        samesite="lax",
+        samesite="none" if settings.ENV != "dev" else "lax",
         secure=(settings.ENV != "dev"),
     )
     return resp

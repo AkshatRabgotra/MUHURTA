@@ -102,16 +102,14 @@ def _to_plan_schema(plan: PlanRequest) -> PlanRequestSchema:
 @router.post("/plans", response_model=PlanRequestSchema)
 async def create_new_plan(
     payload: PlanCreateRequest,
-    current_user: User | None = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> PlanRequestSchema:
     """Create a new plan request: runs category agent and returns up to 3 scored auspicious slots.
-    Unauthenticated guest users can calculate Muhurta without signing in.
+    Requires authenticated user so all consultations are saved.
     """
-    user_id = current_user.id if current_user else None
-    if user_id:
-        check_rate_limit(user_id)
-    plan = await create_plan(user_id, payload.text, db, explicit_category=payload.category)
+    check_rate_limit(current_user.id)
+    plan = await create_plan(current_user.id, payload.text, db, explicit_category=payload.category)
     return _to_plan_schema(plan)
 
 

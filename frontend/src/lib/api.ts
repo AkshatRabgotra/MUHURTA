@@ -30,11 +30,15 @@ class ApiClient {
   }
 
   async fetch<T>(path: string, options?: RequestInit): Promise<T> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('muhurta_token') : null;
+    const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
     const res = await fetch(`${this.baseUrl}${path}`, {
       ...options,
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
         ...options?.headers,
       },
     });
@@ -109,21 +113,32 @@ class ApiClient {
     });
   }
 
-  register(data: { email: string; password: string; name?: string; timezone?: string; default_city?: string }): Promise<{ message: string; user: User; token: string }> {
-    return this.fetch<{ message: string; user: User; token: string }>('/auth/register', {
+  async register(data: { email: string; password: string; name?: string; timezone?: string; default_city?: string }): Promise<{ message: string; user: User; token: string }> {
+    const res = await this.fetch<{ message: string; user: User; token: string }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
     });
+    if (res.token && typeof window !== 'undefined') {
+      localStorage.setItem('muhurta_token', res.token);
+    }
+    return res;
   }
 
-  login(data: { email: string; password: string }): Promise<{ message: string; user: User; token: string }> {
-    return this.fetch<{ message: string; user: User; token: string }>('/auth/login', {
+  async login(data: { email: string; password: string }): Promise<{ message: string; user: User; token: string }> {
+    const res = await this.fetch<{ message: string; user: User; token: string }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(data),
     });
+    if (res.token && typeof window !== 'undefined') {
+      localStorage.setItem('muhurta_token', res.token);
+    }
+    return res;
   }
 
-  logout(): Promise<{ message: string }> {
+  async logout(): Promise<{ message: string }> {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('muhurta_token');
+    }
     return this.fetch<{ message: string }>('/auth/logout', {
       method: 'POST',
     });

@@ -39,31 +39,28 @@ function PlannerContent() {
   // History state
   const [history, setHistory] = useState<PlanRequest[]>([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [isGuest, setIsGuest] = useState(true);
+
+  useEffect(() => {
+    // Check if token was provided in URL query from Google OAuth callback
+    const tokenFromUrl = searchParams.get('token');
+    if (tokenFromUrl && typeof window !== 'undefined') {
+      localStorage.setItem('muhurta_token', tokenFromUrl);
+      window.history.replaceState({}, '', '/planner');
+    }
+
+    // Verify user is authenticated; redirect to login if not
+    api.getMe().catch(() => {
+      // If not logged in, prompt sign in
+      window.location.href = '/login';
+    });
+  }, [searchParams]);
 
   const loadHistory = useCallback(async () => {
     try {
-      const me = await api.getMe();
-      if (me && me.email) {
-        setIsGuest(false);
-        const res = await api.getPlans(1, 15);
-        setHistory(res.items || []);
-        return;
-      }
+      const res = await api.getPlans(1, 15);
+      setHistory(res.items || []);
     } catch {
-      setIsGuest(true);
-    }
-
-    // Local storage fallback for guest consultations
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('muhurta_guest_history');
-        if (stored) {
-          setHistory(JSON.parse(stored));
-        }
-      } catch {
-        // ignore
-      }
+      // ignore
     }
   }, []);
 
@@ -99,19 +96,6 @@ function PlannerContent() {
       const result = await api.createPlan(trimmed, categoryOverride);
       clearInterval(timer);
       setPlan(result);
-
-      // Persist to guest local storage
-      if (typeof window !== 'undefined') {
-        try {
-          const stored = localStorage.getItem('muhurta_guest_history');
-          const currentList: PlanRequest[] = stored ? JSON.parse(stored) : [];
-          const updated = [result, ...currentList.filter((p) => p.id !== result.id)].slice(0, 10);
-          localStorage.setItem('muhurta_guest_history', JSON.stringify(updated));
-        } catch {
-          // ignore
-        }
-      }
-
       loadHistory();
     } catch (err: any) {
       clearInterval(timer);
@@ -402,33 +386,6 @@ function PlannerContent() {
                   locationName={plan.location_name || 'Bengaluru'}
                 />
               ))}
-            </div>
-          )}
-
-          {/* Guest Mode Callout */}
-          {isGuest && (
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-950/40 via-red-950/30 to-amber-950/40 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-200/90 shadow-md">
-              <div className="flex items-center gap-2.5">
-                <span className="text-xl">🪔</span>
-                <div>
-                  <strong className="block text-amber-300">You are browsing in Guest Mode</strong>
-                  <span>Your consultations are kept in this browser. Create an account to sync history across devices and receive Telegram alerts.</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Link
-                  href="/signup"
-                  className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition text-center whitespace-nowrap"
-                >
-                  Sign Up Free
-                </Link>
-                <Link
-                  href="/login"
-                  className="px-3.5 py-1.5 rounded-lg border border-amber-500/40 hover:bg-white/5 text-amber-200 font-medium text-xs transition text-center whitespace-nowrap"
-                >
-                  Sign In
-                </Link>
-              </div>
             </div>
           )}
         </section>

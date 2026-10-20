@@ -32,19 +32,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleDevLogin = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      await api.devLogin();
-      router.push('/planner');
-    } catch (err: any) {
-      setError(err.message || 'Dev login failed.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <main className="min-h-[80vh] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm vedic-card-vibrant rounded-3xl p-7 sm:p-8 space-y-5 animate-gold-pulse">
@@ -143,18 +130,6 @@ export default function LoginPage() {
             {isLoading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
-
-        {/* 1-Click Dev Guest */}
-        <div className="pt-1">
-          <button
-            type="button"
-            onClick={handleDevLogin}
-            disabled={isLoading}
-            className="w-full py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-amber-500/20 text-amber-300 text-xs font-semibold transition"
-          >
-            ⚡ Instant Guest Mode
-          </button>
-        </div>
 
         {/* Footer */}
         <p className="text-center text-xs text-amber-200/60">
