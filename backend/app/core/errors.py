@@ -15,6 +15,11 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 
+import structlog
+
+logger = structlog.get_logger(__name__)
+
+
 # ── Common error codes ───────────────────────────────────────────────────
 class ErrorCode(StrEnum):
     """Well-known error codes used across the application."""
@@ -97,10 +102,10 @@ async def _handle_app_error(request: Request, exc: AppError) -> JSONResponse:
 
 
 async def _handle_unhandled(request: Request, exc: Exception) -> JSONResponse:
-    # TODO: log with structlog
+    logger.exception("Unhandled server exception", path=request.url.path, error=str(exc))
     return JSONResponse(
         status_code=500,
-        content=_error_body(ErrorCode.INTERNAL, "An unexpected error occurred."),
+        content=_error_body(ErrorCode.INTERNAL, f"An unexpected error occurred: {exc}"),
     )
 
 

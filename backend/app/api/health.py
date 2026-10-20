@@ -15,20 +15,16 @@ router = APIRouter(tags=["health"])
 
 @router.get("/health", response_model=dict[str, Any])
 async def healthcheck(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
-    """Return service health including database connectivity.
-
-    Returns
-    -------
-    dict
-        ``{"status": "healthy", "database": "connected"}`` on success, or
-        ``{"status": "unhealthy", "database": "<error message>"}`` on failure.
-    """
+    """Return service health including database connectivity and tables."""
     try:
         await db.execute(text("SELECT 1"))
+        res = await db.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema='public'"))
+        tables = [row[0] for row in res.fetchall()]
         db_status = "connected"
         status = "healthy"
     except Exception as exc:
+        tables = []
         db_status = str(exc)
         status = "unhealthy"
 
-    return {"status": status, "database": db_status}
+    return {"status": status, "database": db_status, "tables": tables}

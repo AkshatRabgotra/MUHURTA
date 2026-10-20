@@ -42,15 +42,16 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Ensure database tables exist across all environments
     try:
+        import app.db.models  # noqa: F401 - ensure all ORM models are registered
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
             # Ensure password_hash exists on users table
             try:
                 from sqlalchemy import text
-                await conn.execute(text("ALTER TABLE users ADD COLUMN password_hash VARCHAR(255)"))
+                await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)"))
             except Exception:
-                pass  # column already exists
-        logger.info("Database tables verified/created successfully")
+                pass  # column already exists or dialect does not support IF NOT EXISTS
+        logger.info("Database tables verified/created successfully", tables=list(Base.metadata.tables.keys()))
     except Exception as exc:
         logger.error("Could not automatically create tables at startup", error=str(exc))
 

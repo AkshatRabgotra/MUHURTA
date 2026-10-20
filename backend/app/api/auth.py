@@ -226,8 +226,9 @@ async def google_callback(
 
     except Exception as exc:
         logger.exception("Unexpected error during Google callback", error=str(exc))
+        err_msg = urllib.parse.quote(f"Authentication failed: {exc}")
         return RedirectResponse(
-            url=f"{settings.FRONTEND_URL}/login?error=Authentication+failed.+Please+try+again.",
+            url=f"{settings.FRONTEND_URL}/login?error={err_msg}",
             status_code=303,
         )
 
@@ -239,41 +240,47 @@ async def register_user(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """Register a new user with email and password."""
-    email = payload.email.lower().strip()
-    existing = await db.execute(select(User).where(User.email == email))
-    if existing.scalar_one_or_none():
-        raise AppError(code=ErrorCode.BAD_REQUEST, message="An account with this email already exists.", status_code=400)
+    try:
+        email = payload.email.lower().strip()
+        existing = await db.execute(select(User).where(User.email == email))
+        if existing.scalar_one_or_none():
+            raise AppError(code=ErrorCode.BAD_REQUEST, message="An account with this email already exists.", status_code=400)
 
-    user = User(
-        email=email,
-        name=payload.name or email.split("@")[0],
-        password_hash=hash_password(payload.password),
-        timezone=payload.timezone or "Asia/Kolkata",
-        default_city=payload.default_city,
-    )
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
+        user = User(
+            email=email,
+            name=payload.name or email.split("@")[0],
+            password_hash=hash_password(payload.password),
+            timezone=payload.timezone or "Asia/Kolkata",
+            default_city=payload.default_city,
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
 
-    jwt_token = create_access_token({"sub": str(user.id), "email": user.email})
-    response.set_cookie(
-        key=COOKIE_NAME,
-        value=jwt_token,
-        httponly=True,
-        samesite="lax",
-        secure=(settings.ENV != "dev"),
-    )
-    return {
-        "message": "User registered successfully",
-        "user": {
-            "id": str(user.id),
-            "email": user.email,
-            "name": user.name,
-            "timezone": user.timezone,
-            "default_city": user.default_city,
-        },
-        "token": jwt_token,
-    }
+        jwt_token = create_access_token({"sub": str(user.id), "email": user.email})
+        response.set_cookie(
+            key=COOKIE_NAME,
+            value=jwt_token,
+            httponly=True,
+            samesite="lax",
+            secure=(settings.ENV != "dev"),
+        )
+        return {
+            "message": "User registered successfully",
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "name": user.name,
+                "timezone": user.timezone,
+                "default_city": user.default_city,
+            },
+            "token": jwt_token,
+        }
+    except AppError:
+        raise
+    except Exception as exc:
+        logger.exception("Error during user registration", error=str(exc))
+        raise AppError(code=ErrorCode.INTERNAL, message=f"Registration failed: {exc}", status_code=500) from exc
 
 
 @router.post("/auth/login")
@@ -283,33 +290,39 @@ async def login_user(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """Authenticate user with email and password."""
-    email = payload.email.lower().strip()
-    q = select(User).where(User.email == email)
-    res = await db.execute(q)
-    user = res.scalar_one_or_none()
+    try:
+        email = payload.email.lower().strip()
+        q = select(User).where(User.email == email)
+        res = await db.execute(q)
+        user = res.scalar_one_or_none()
 
-    if not user or not user.password_hash or not verify_password(payload.password, user.password_hash):
-        raise AppError(code=ErrorCode.UNAUTHORIZED, message="Invalid email or password.", status_code=401)
+        if not user or not user.password_hash or not verify_password(payload.password, user.password_hash):
+            raise AppError(code=ErrorCode.UNAUTHORIZED, message="Invalid email or password.", status_code=401)
 
-    jwt_token = create_access_token({"sub": str(user.id), "email": user.email})
-    response.set_cookie(
-        key=COOKIE_NAME,
-        value=jwt_token,
-        httponly=True,
-        samesite="lax",
-        secure=(settings.ENV != "dev"),
-    )
-    return {
-        "message": "Logged in successfully",
-        "user": {
-            "id": str(user.id),
-            "email": user.email,
-            "name": user.name,
-            "timezone": user.timezone,
-            "default_city": user.default_city,
-        },
-        "token": jwt_token,
-    }
+        jwt_token = create_access_token({"sub": str(user.id), "email": user.email})
+        response.set_cookie(
+            key=COOKIE_NAME,
+            value=jwt_token,
+            httponly=True,
+            samesite="lax",
+            secure=(settings.ENV != "dev"),
+        )
+        return {
+            "message": "Logged in successfully",
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "name": user.name,
+                "timezone": user.timezone,
+                "default_city": user.default_city,
+            },
+            "token": jwt_token,
+        }
+    except AppError:
+        raise
+    except Exception as exc:
+        logger.exception("Error during user login", error=str(exc))
+        raise AppError(code=ErrorCode.INTERNAL, message=f"Login failed: {exc}", status_code=500) from exc
 
 
 @router.post("/auth/logout")
