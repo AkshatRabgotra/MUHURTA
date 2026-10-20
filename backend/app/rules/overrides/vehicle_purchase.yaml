@@ -1,0 +1,12 @@
+# Illustrative rules for a single tradition (Drik/Lahiri). Verify against a source before real use.
+override: vehicle_purchase
+extends: vehicle_travel
+display_name: Vehicle purchase & delivery
+preferred:
+  nakshatra_classes: {chara: 3, kshipra: 3, dhruva: 2}
+  weekdays: {Wednesday: 3, Thursday: 3, Friday: 3, Sunday: 2}
+hard_avoid:
+  tithis: [4, 9, 14, 30]
+advisory:
+  requires_pandit_review: false
+  note: "Taking delivery of a new vehicle is traditionally auspicious during Chara and Kshipra nakshatras."

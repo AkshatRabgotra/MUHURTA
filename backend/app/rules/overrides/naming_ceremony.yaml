@@ -1,0 +1,12 @@
+# Illustrative rules for a single tradition (Drik/Lahiri). Verify against a source before real use.
+override: naming_ceremony
+extends: relationships_family
+display_name: Naming ceremony (Namakarana)
+preferred:
+  nakshatra_classes: {mridu: 3, dhruva: 3, kshipra: 2}
+  weekdays: {Monday: 2, Wednesday: 3, Thursday: 3, Friday: 3}
+hard_avoid:
+  tithis: [4, 9, 14, 30]
+advisory:
+  requires_pandit_review: false
+  note: "Namakarana is traditionally performed on the 10th, 11th, 12th, or 16th day after birth."

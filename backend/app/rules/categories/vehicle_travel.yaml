@@ -1,0 +1,10 @@
+# Illustrative rules for a single tradition (Drik/Lahiri). Verify against a source before real use.
+category: vehicle_travel
+display_name: Travel & vehicle movement (trips, journeys, flights, departures)
+description: Dynamic activities involving speed, relocation, and safe journeys.
+preferred:
+  nakshatra_classes: {chara: 3, kshipra: 3, mridu: 1}
+  weekdays: {Monday: 2, Wednesday: 3, Thursday: 3, Friday: 3}
+  choghadiya: {Amrit: 3, Shubh: 3, Labh: 3, Char: 3}
+  tithis: {2: 2, 3: 2, 5: 2, 7: 2, 10: 2, 11: 2, 13: 2}
+weights: {nakshatra: 1.5, weekday: 1.0, choghadiya: 2.0, tithi: 1.0}

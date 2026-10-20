@@ -1,0 +1,9 @@
+# Illustrative rules for a single tradition (Drik/Lahiri). Verify against a source before real use.
+classes:
+  dhruva:  [Rohini, Uttara Phalguni, Uttara Ashadha, Uttara Bhadrapada]
+  chara:   [Punarvasu, Swati, Shravana, Dhanishta, Shatabhisha]
+  kshipra: [Ashwini, Pushya, Hasta]
+  mridu:   [Mrigashira, Chitra, Anuradha, Revati]
+  ugra:    [Bharani, Magha, Purva Phalguni, Purva Ashadha, Purva Bhadrapada]
+  tikshna: [Ardra, Ashlesha, Jyeshtha, Moola]
+  mishra:  [Krittika, Vishakha]

@@ -1,0 +1,9 @@
+# Illustrative rules for a single tradition (Drik/Lahiri). Verify against a source before real use.
+hard_avoid:
+  rahu_kalam: true
+  choghadiya: [Udveg, Kaal, Rog]
+  tithis: [30]            # Amavasya
+  nakshatra_classes: [tikshna]
+soft_avoid:               # subtract points
+  tithis: {4: -2, 9: -2, 14: -2}
+  nakshatra_classes: {ugra: -1}

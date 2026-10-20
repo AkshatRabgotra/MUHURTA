@@ -1,0 +1,10 @@
+# Illustrative rules for a single tradition (Drik/Lahiri). Verify against a source before real use.
+category: education_learning
+display_name: Education & learning (courses, exams, admissions, academic research)
+description: Acquiring knowledge, enrolling in studies, starting research or intellectual pursuits.
+preferred:
+  nakshatra_classes: {kshipra: 3, mridu: 3, chara: 1}
+  weekdays: {Wednesday: 3, Thursday: 3, Monday: 2, Friday: 2}
+  choghadiya: {Shubh: 3, Labh: 3, Amrit: 2}
+  tithis: {2: 2, 3: 2, 5: 3, 7: 1, 10: 2, 11: 1}
+weights: {nakshatra: 1.5, weekday: 1.0, choghadiya: 2.0, tithi: 1.0}

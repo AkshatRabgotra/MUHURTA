@@ -1,0 +1,10 @@
+# Illustrative rules for a single tradition (Drik/Lahiri). Verify against a source before real use.
+category: new_beginnings
+display_name: New beginnings (job, course, venture, first day)
+description: Starting something that should grow and last.
+preferred:
+  nakshatra_classes: {kshipra: 3, dhruva: 3, mridu: 1}
+  weekdays: {Monday: 1, Wednesday: 2, Thursday: 3, Friday: 2}
+  choghadiya: {Amrit: 3, Shubh: 3, Labh: 2, Char: 1}
+  tithis: {2: 1, 3: 1, 5: 2, 7: 1, 10: 1, 11: 1, 13: 1}
+weights: {nakshatra: 1.5, weekday: 1.0, choghadiya: 2.0, tithi: 1.0}

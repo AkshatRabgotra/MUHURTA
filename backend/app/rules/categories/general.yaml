@@ -1,0 +1,10 @@
+# Illustrative rules for a single tradition (Drik/Lahiri). Verify against a source before real use.
+category: general
+display_name: General auspicious timing (Sarva Karya Siddhi)
+description: Universal auspicious timing for general activities when no specific category applies.
+preferred:
+  nakshatra_classes: {kshipra: 2, dhruva: 2, mridu: 1}
+  weekdays: {Monday: 1, Wednesday: 2, Thursday: 2, Friday: 2, Sunday: 1}
+  choghadiya: {Amrit: 3, Shubh: 3, Labh: 2, Char: 1}
+  tithis: {2: 1, 3: 1, 5: 2, 7: 1, 10: 1, 11: 1, 13: 1}
+weights: {nakshatra: 1.0, weekday: 1.0, choghadiya: 2.0, tithi: 1.0}

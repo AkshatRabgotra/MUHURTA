@@ -1,0 +1,12 @@
+# Illustrative rules for a single tradition (Drik/Lahiri). Verify against a source before real use.
+override: griha_pravesh
+extends: property_construction
+display_name: House-warming (Griha Pravesh)
+preferred:
+  nakshatra_classes: {dhruva: 3}
+  weekdays: {Monday: 2, Wednesday: 2, Thursday: 3, Friday: 3}
+hard_avoid:
+  tithis: [4, 8, 9, 14, 30]
+advisory:
+  requires_pandit_review: true
+  note: "House-warming timing also depends on factors this app does not compute. Please confirm with a pandit."

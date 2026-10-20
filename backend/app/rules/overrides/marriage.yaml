@@ -1,0 +1,12 @@
+# Illustrative rules for a single tradition (Drik/Lahiri). Verify against a source before real use.
+override: marriage
+extends: relationships_family
+display_name: Marriage & wedding ceremony (Vivaha)
+preferred:
+  nakshatra_classes: {mridu: 4, dhruva: 4}
+  weekdays: {Monday: 2, Wednesday: 3, Thursday: 3, Friday: 3}
+hard_avoid:
+  tithis: [4, 8, 9, 14, 30]
+advisory:
+  requires_pandit_review: true
+  note: "Horoscope matching (Kundali Milan) and family tradition are not computed by this app. Please confirm wedding timing with a family pandit."
