@@ -28,7 +28,7 @@ TELEGRAM_API_BASE = "https://api.telegram.org/bot"
 async def send_telegram_message(
     chat_id: int | str,
     text: str,
-    parse_mode: str = "Markdown",
+    parse_mode: str = "HTML",
     reply_markup: dict | None = None,
 ) -> bool:
     """Send a message to a Telegram chat using Bot API."""
@@ -52,7 +52,7 @@ async def send_telegram_message(
             if resp.status_code == 200 and resp.json().get("ok"):
                 return True
             logger.warning("Failed to send Telegram message", status=resp.status_code, body=resp.text)
-            # Retry without markdown if markdown parsing failed
+            # Retry without HTML if parsing failed
             if "can't parse entities" in resp.text:
                 payload["parse_mode"] = ""
                 await client.post(url, json=payload)
@@ -121,33 +121,35 @@ async def handle_update(update: dict) -> None:
                     await db.commit()
                     await send_telegram_message(
                         chat_id,
-                        f"✨ *Account Linked Successfully!* 🙏\n\n"
-                        f"Namaste {first_name}! Your Telegram account is now connected to your Muhurta Planner profile ({user.email}).\n\n"
+                        f"✨ <b>Account Linked Successfully!</b> 🙏\n\n"
+                        f"Namaste {first_name}! Your Telegram account is now connected to your Muhurta Planner profile (<b>{user.email}</b>).\n\n"
                         f"You will receive automatic alerts 1 hour before your scheduled auspicious windows.\n\n"
                         f"You can also ask me for auspicious timings anytime right here!",
+                        parse_mode="HTML",
                     )
                     return
                 else:
                     await send_telegram_message(
                         chat_id,
                         "⚠️ That link code is invalid or has expired. Please generate a fresh code from your Web Dashboard.",
+                        parse_mode="HTML",
                     )
                     return
 
         # Regular /start or greeting
         welcome_text = (
-            f"Namaste {first_name}! 🙏 Welcome to *Vedic Muhurta Planner* 🪔\n\n"
+            f"Namaste {first_name}! 🙏 Welcome to <b>Vedic Muhurta Planner</b> 🪔\n\n"
             f"I am your classical Vedic timing assistant, powered by the deterministic Swiss Ephemeris astronomical engine.\n\n"
-            f"🌟 *Ask me directly for auspicious timings!*\n"
+            f"🌟 <b>Ask me directly for auspicious timings!</b>\n"
             f"Simply send your planned activity, for example:\n"
-            f"• `Sign rental agreement this Friday morning in Bengaluru`\n"
-            f"• `Buy a new car next week in Mumbai`\n"
-            f"• `Griha Pravesh ceremony in Delhi next month`\n"
-            f"• `Purchasing gold jewelry this weekend in Chennai`\n\n"
-            f"🔗 *Link Your Web Profile:*\n"
-            f"Send `/link <code>` using the code from your web dashboard to sync your consultations."
+            f"• <code>Sign rental agreement this Friday morning in Bengaluru</code>\n"
+            f"• <code>Buy a new car next week in Mumbai</code>\n"
+            f"• <code>Griha Pravesh ceremony in Delhi next month</code>\n"
+            f"• <code>Purchasing gold jewelry this weekend in Chennai</code>\n\n"
+            f"🔗 <b>Link Your Web Profile:</b>\n"
+            f"Send <code>/link &lt;code&gt;</code> using the code from your web dashboard to sync your consultations."
         )
-        await send_telegram_message(chat_id, welcome_text)
+        await send_telegram_message(chat_id, welcome_text, parse_mode="HTML")
         return
 
     # 2. Handle /link <code>
@@ -156,7 +158,8 @@ async def handle_update(update: dict) -> None:
         if len(parts) < 2:
             await send_telegram_message(
                 chat_id,
-                "Please provide your 6-character link code from the web dashboard, like:\n`/link A1B2C3`",
+                "Please provide your 6-character link code from the web dashboard, like:\n<code>/link A1B2C3</code>",
+                parse_mode="HTML",
             )
             return
 
@@ -171,13 +174,15 @@ async def handle_update(update: dict) -> None:
                 await db.commit()
                 await send_telegram_message(
                     chat_id,
-                    f"✅ *Successfully Linked!* 🙏\n\n"
-                    f"Your Telegram is now connected to *{user.email}*. All your consultations and 1-hour reminders will be synchronized.",
+                    f"✅ <b>Successfully Linked!</b> 🙏\n\n"
+                    f"Your Telegram is now connected to <b>{user.email}</b>. All your consultations and 1-hour reminders will be synchronized.",
+                    parse_mode="HTML",
                 )
             else:
                 await send_telegram_message(
                     chat_id,
                     "⚠️ Invalid or expired code. Please generate a new code from the web app.",
+                    parse_mode="HTML",
                 )
         return
 
@@ -186,14 +191,18 @@ async def handle_update(update: dict) -> None:
     await send_chat_action(chat_id, "typing")
 
     try:
-        # Check if user is linked
-        linked_user_id = None
+        slots_data = []
+        city_display = "Local Area"
+        category_display = "Auspicious Timing"
+        clarification = None
+        shortage = None
+
         async with async_session_factory() as db:
+            # Check if Telegram chat is linked to a registered web user
             q = select(User).where(User.telegram_chat_id == str(chat_id))
             res = await db.execute(q)
             user = res.scalar_one_or_none()
-            if user:
-                linked_user_id = user.id
+            linked_user_id = user.id if user else None
 
             # Run planner
             plan = await create_plan(
@@ -202,58 +211,106 @@ async def handle_update(update: dict) -> None:
                 db=db,
             )
 
-        if not plan.slots:
-            clarify = plan.clarification or "Please provide the city name and preferred timeframe (e.g. *in Bengaluru this Friday morning*)."
+            city_display = plan.location_name or (user.default_city if user and user.default_city else "Bengaluru, India")
+            category_display = (plan.override or plan.category or "Auspicious Timing").replace("_", " ").title()
+            clarification = plan.clarification
+            shortage = plan.shortage_reason
+
+            for s in (plan.slots or []):
+                slots_data.append({
+                    "rank": s.rank,
+                    "score": float(s.score) if s.score is not None else 0.0,
+                    "start_utc": s.start_utc,
+                    "end_utc": s.end_utc,
+                    "reasons": s.reasons or [],
+                    "explanation": s.explanation_text or "",
+                })
+
+        # If no auspicious slots found or needs clarification
+        if not slots_data:
+            if isinstance(clarification, dict) and clarification.get("question"):
+                clarify_msg = clarification["question"]
+            elif isinstance(clarification, str) and clarification.strip():
+                clarify_msg = clarification.strip()
+            elif shortage:
+                clarify_msg = f"No ideal auspicious windows were found: {shortage}. Try expanding your search timeframe."
+            else:
+                clarify_msg = "Please mention your activity and preferred city."
+
             await send_telegram_message(
                 chat_id,
-                f"🪔 *Need a bit more information:*\n\n{clarify}",
+                f"🪔 <b>More Details Needed</b>\n\n{clarify_msg}\n\n<i>Example:</i> <code>Car purchase in Mumbai next week</code>",
+                parse_mode="HTML",
             )
             return
 
         # Format Top 3 slots response
-        city_display = plan.location_name or "Local Area"
-        category_display = (plan.override or plan.category or "Auspicious Timing").replace("_", " ").title()
-
         msg_lines = [
-            f"🪔 *Vedic Muhurta Recommendations*",
-            f"🎯 *Activity:* {category_display}",
-            f"📍 *Location:* {city_display}",
-            f"━━━━━━━━━━━━━━━━━━━",
+            f"🪔 <b>Vedic Muhurta Recommendations</b>",
+            f"🎯 <b>Activity:</b> {category_display}",
+            f"📍 <b>Location:</b> {city_display}",
+            f"━━━━━━━━━━━━━━━━━━━━━━",
         ]
 
-        for s in plan.slots[:3]:
-            start_str = _format_time_str(str(s.start_utc))
-            end_str = _format_time_str(str(s.end_utc))
-            reasons_summary = ", ".join([f"{r.get('factor')}: {r.get('value')}" for r in (s.reasons or [])[:3]])
+        for s in slots_data[:3]:
+            start_dt = s["start_utc"]
+            end_dt = s["end_utc"]
 
-            # Google calendar render link
+            if hasattr(start_dt, "strftime"):
+                start_str = start_dt.strftime("%a, %b %d • %I:%M %p")
+                end_str = end_dt.strftime("%I:%M %p")
+                start_iso = start_dt.strftime("%Y%m%dT%H%M%SZ")
+                end_iso = end_dt.strftime("%Y%m%dT%H%M%SZ")
+            else:
+                start_str = str(start_dt)
+                end_str = str(end_dt)
+                start_iso = ""
+                end_iso = ""
+
+            # Reasons summary
+            reason_items = []
+            for r in s.get("reasons", [])[:3]:
+                if isinstance(r, dict):
+                    factor = str(r.get("factor", "")).replace("_", " ").title()
+                    val = str(r.get("value", "")).replace("_", " ").title()
+                    reason_items.append(f"{factor}: <i>{val}</i>")
+            reasons_summary = " • ".join(reason_items) if reason_items else "Harmonious Planetary Placement"
+
+            # Clean explanation text
+            explanation = (s.get("explanation") or "").strip()
+
+            # Google Calendar link
             gcal_title = urllib.parse.quote(f"Muhurta: {category_display}")
-            gcal_desc = urllib.parse.quote(s.explanation_text or "")
+            gcal_desc = urllib.parse.quote(explanation)
             gcal_loc = urllib.parse.quote(city_display)
-            start_iso = str(s.start_utc).replace("-", "").replace(":", "").split(".")[0]
-            end_iso = str(s.end_utc).replace("-", "").replace(":", "").split(".")[0]
-            gcal_url = f"https://calendar.google.com/calendar/render?action=TEMPLATE&text={gcal_title}&dates={start_iso}Z/{end_iso}Z&details={gcal_desc}&location={gcal_loc}"
+            gcal_url = f"https://calendar.google.com/calendar/render?action=TEMPLATE&text={gcal_title}&dates={start_iso}/{end_iso}&details={gcal_desc}&location={gcal_loc}"
+
+            rank = s.get("rank", 1)
+            score = s.get("score", 0.0)
 
             slot_block = (
-                f"\n🌟 *Option #{s.rank}* • *Score: {s.score:.1f}/30*\n"
-                f"⏰ *{start_str}* — *{end_str}*\n"
-                f"🪐 *Alignments:* {reasons_summary}\n"
-                f"📖 {s.explanation_text}\n"
-                f"📅 [Add to Google Calendar]({gcal_url})"
+                f"\n🌟 <b>Option #{rank}</b> • <b>Score: {score:.1f}/30</b>\n"
+                f"⏰ <b>{start_str} — {end_str} UTC</b>\n"
+                f"🪐 <b>Alignments:</b> {reasons_summary}\n"
+                f"📖 {explanation}\n"
+                f"📅 <a href=\"{gcal_url}\"><b>Add to Google Calendar ↗</b></a>"
             )
             msg_lines.append(slot_block)
 
-        msg_lines.append("\n━━━━━━━━━━━━━━━━━━━")
-        msg_lines.append("🪔 _Calculated deterministically using Lahiri Ayanamsa & Swiss Ephemeris._")
+        msg_lines.append("\n━━━━━━━━━━━━━━━━━━━━━━")
+        msg_lines.append("🪔 <i>Calculated deterministically using Lahiri Ayanamsa & Swiss Ephemeris.</i>")
 
         final_msg = "\n".join(msg_lines)
-        await send_telegram_message(chat_id, final_msg)
+        await send_telegram_message(chat_id, final_msg, parse_mode="HTML")
 
     except Exception as exc:
-        logger.error("Failed to process Telegram Muhurta query", error=str(exc))
+        logger.exception("Failed to process Telegram Muhurta query", error=str(exc))
+        import html
+        err_msg = html.escape(str(exc))
         await send_telegram_message(
             chat_id,
-            "⚠️ An error occurred while calculating auspicious timings. Please ensure your query includes an activity and a city (e.g. *Car purchase in Bengaluru next Friday*).",
+            f"⚠️ <b>Calculation Notice:</b>\n{err_msg}\n\nPlease try including an activity and city, for example:\n• <code>Car purchase in Mumbai next week</code>\n• <code>Rental agreement in Bengaluru this Friday</code>",
+            parse_mode="HTML",
         )
 
 
