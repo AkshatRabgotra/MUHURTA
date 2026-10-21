@@ -43,24 +43,27 @@ async def get_optional_current_user(
     authorization: str | None = Header(default=None),
 ) -> User | None:
     """Extract authenticated user if token is present and valid; returns None for guests without raising."""
-    token = access_token
-    if not token and authorization and authorization.startswith("Bearer "):
-        token = authorization[7:].strip()
+    candidates: list[str] = []
+    if authorization and authorization.startswith("Bearer "):
+        candidates.append(authorization[7:].strip())
+    if access_token:
+        candidates.append(access_token)
 
-    if not token:
-        return None
-
-    try:
-        payload = decode_access_token(token)
-        sub = payload.get("sub")
-        if not sub:
-            return None
-        user_id = uuid.UUID(sub)
-        q = select(User).where(User.id == user_id)
-        res = await db.execute(q)
-        return res.scalar_one_or_none()
-    except Exception:
-        return None
+    for token in candidates:
+        try:
+            payload = decode_access_token(token)
+            sub = payload.get("sub")
+            if not sub:
+                continue
+            user_id = uuid.UUID(sub)
+            q = select(User).where(User.id == user_id)
+            res = await db.execute(q)
+            user = res.scalar_one_or_none()
+            if user:
+                return user
+        except Exception:
+            continue
+    return None
 
 
 async def get_current_user(
@@ -68,32 +71,39 @@ async def get_current_user(
     access_token: str | None = Cookie(default=None, alias=COOKIE_NAME),
     authorization: str | None = Header(default=None),
 ) -> User:
-    """Extract authenticated user from httpOnly cookie or Authorization Bearer header.
+    """Extract authenticated user from Authorization Bearer header or httpOnly cookie.
     Raises 401 if unauthenticated.
     """
-    token = access_token
-    if not token and authorization and authorization.startswith("Bearer "):
-        token = authorization[7:].strip()
+    candidates: list[str] = []
+    if authorization and authorization.startswith("Bearer "):
+        candidates.append(authorization[7:].strip())
+    if access_token:
+        candidates.append(access_token)
 
-    if not token:
+    if not candidates:
         raise AppError(code=ErrorCode.UNAUTHORIZED, message="Authentication required.", status_code=401)
 
-    try:
-        payload = decode_access_token(token)
-        sub = payload.get("sub")
-        if not sub:
-            raise AppError(code=ErrorCode.UNAUTHORIZED, message="Invalid token payload.", status_code=401)
-        user_id = uuid.UUID(sub)
-    except Exception as exc:
-        raise AppError(code=ErrorCode.UNAUTHORIZED, message="Invalid or expired token.", status_code=401) from exc
+    last_exc: Exception | None = None
+    for token in candidates:
+        try:
+            payload = decode_access_token(token)
+            sub = payload.get("sub")
+            if not sub:
+                continue
+            user_id = uuid.UUID(sub)
+            q = select(User).where(User.id == user_id)
+            res = await db.execute(q)
+            user = res.scalar_one_or_none()
+            if user:
+                return user
+        except Exception as exc:
+            last_exc = exc
 
-    q = select(User).where(User.id == user_id)
-    res = await db.execute(q)
-    user = res.scalar_one_or_none()
-    if not user:
-        raise AppError(code=ErrorCode.UNAUTHORIZED, message="User not found.", status_code=401)
-
-    return user
+    raise AppError(
+        code=ErrorCode.UNAUTHORIZED,
+        message="Invalid or expired session. Please sign in again.",
+        status_code=401,
+    ) from last_exc
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────
@@ -262,7 +272,7 @@ async def register_user(
             key=COOKIE_NAME,
             value=jwt_token,
             httponly=True,
-            samesite="lax",
+            samesite="none" if settings.ENV != "dev" else "lax",
             secure=(settings.ENV != "dev"),
         )
         return {
@@ -304,7 +314,7 @@ async def login_user(
             key=COOKIE_NAME,
             value=jwt_token,
             httponly=True,
-            samesite="lax",
+            samesite="none" if settings.ENV != "dev" else "lax",
             secure=(settings.ENV != "dev"),
         )
         return {

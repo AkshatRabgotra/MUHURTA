@@ -48,10 +48,20 @@ function PlannerContent() {
       window.history.replaceState({}, '', '/planner');
     }
 
-    // Verify user is authenticated; redirect to login if not
-    api.getMe().catch(() => {
-      // If not logged in, prompt sign in
+    const token = tokenFromUrl || (typeof window !== 'undefined' ? localStorage.getItem('muhurta_token') : null);
+    if (!token) {
       window.location.href = '/login';
+      return;
+    }
+
+    // Verify user is authenticated; redirect to login only if session is invalid/expired (401)
+    api.getMe().catch((err: any) => {
+      if (err?.status === 401) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('muhurta_token');
+        }
+        window.location.href = '/login';
+      }
     });
   }, [searchParams]);
 
