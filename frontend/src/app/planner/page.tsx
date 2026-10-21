@@ -16,7 +16,13 @@ const EXAMPLES = [
   { label: 'Anniversary Party', query: 'Wedding anniversary family gathering next Saturday in Pune' },
 ];
 
-const CITIES = ['Bengaluru', 'Mumbai', 'Delhi', 'Hyderabad', 'Chennai', 'Pune', 'Kolkata', 'London', 'New York'];
+const CITIES = [
+  'Bengaluru', 'Mumbai', 'Delhi', 'Hyderabad', 'Chennai', 'Pune', 'Kolkata', 'Ahmedabad',
+  'Jaipur', 'Lucknow', 'Chandigarh', 'Varanasi', 'Ayodhya', 'Indore', 'Bhopal', 'Surat',
+  'Patna', 'Kochi', 'Visakhapatnam', 'Coimbatore', 'Nagpur', 'Guwahati', 'Bhubaneswar',
+  'Amritsar', 'Dehradun', 'Haridwar', 'Rishikesh', 'Ujjain', 'Tirupati', 'Mysuru', 'Goa',
+  'Dubai', 'London', 'New York'
+];
 const TIMES = ['Morning (9am - 12pm)', 'Afternoon (12pm - 4pm)', 'Evening (4pm - 8pm)', 'Anytime of day'];
 
 function PlannerContent() {

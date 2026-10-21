@@ -5,22 +5,149 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/api';
 
-const CITIES = [
-  { city: 'Bengaluru', tz: 'Asia/Kolkata', label: 'Bengaluru (IST)' },
-  { city: 'Mumbai', tz: 'Asia/Kolkata', label: 'Mumbai (IST)' },
-  { city: 'Delhi', tz: 'Asia/Kolkata', label: 'Delhi (IST)' },
-  { city: 'Hyderabad', tz: 'Asia/Kolkata', label: 'Hyderabad (IST)' },
-  { city: 'Chennai', tz: 'Asia/Kolkata', label: 'Chennai (IST)' },
-  { city: 'London', tz: 'Europe/London', label: 'London (GMT/BST)' },
-  { city: 'New York', tz: 'America/New_York', label: 'New York (EST/EDT)' },
+interface CityOption {
+  city: string;
+  tz: string;
+  label: string;
+}
+
+interface CityGroup {
+  group: string;
+  options: CityOption[];
+}
+
+const CITY_GROUPS: CityGroup[] = [
+  {
+    group: '⭐ Metros & Major Tech Hubs',
+    options: [
+      { city: 'Bengaluru', tz: 'Asia/Kolkata', label: 'Bengaluru (Karnataka)' },
+      { city: 'Mumbai', tz: 'Asia/Kolkata', label: 'Mumbai (Maharashtra)' },
+      { city: 'New Delhi', tz: 'Asia/Kolkata', label: 'New Delhi / NCR' },
+      { city: 'Hyderabad', tz: 'Asia/Kolkata', label: 'Hyderabad (Telangana)' },
+      { city: 'Chennai', tz: 'Asia/Kolkata', label: 'Chennai (Tamil Nadu)' },
+      { city: 'Kolkata', tz: 'Asia/Kolkata', label: 'Kolkata (West Bengal)' },
+      { city: 'Pune', tz: 'Asia/Kolkata', label: 'Pune (Maharashtra)' },
+      { city: 'Ahmedabad', tz: 'Asia/Kolkata', label: 'Ahmedabad (Gujarat)' },
+    ],
+  },
+  {
+    group: '🏛️ North India',
+    options: [
+      { city: 'Chandigarh', tz: 'Asia/Kolkata', label: 'Chandigarh (Punjab & Haryana)' },
+      { city: 'Jaipur', tz: 'Asia/Kolkata', label: 'Jaipur (Rajasthan)' },
+      { city: 'Jodhpur', tz: 'Asia/Kolkata', label: 'Jodhpur (Rajasthan)' },
+      { city: 'Udaipur', tz: 'Asia/Kolkata', label: 'Udaipur (Rajasthan)' },
+      { city: 'Lucknow', tz: 'Asia/Kolkata', label: 'Lucknow (Uttar Pradesh)' },
+      { city: 'Kanpur', tz: 'Asia/Kolkata', label: 'Kanpur (Uttar Pradesh)' },
+      { city: 'Noida', tz: 'Asia/Kolkata', label: 'Noida / Greater Noida (UP)' },
+      { city: 'Gurugram', tz: 'Asia/Kolkata', label: 'Gurugram / Gurgaon (Haryana)' },
+      { city: 'Agra', tz: 'Asia/Kolkata', label: 'Agra (Uttar Pradesh)' },
+      { city: 'Amritsar', tz: 'Asia/Kolkata', label: 'Amritsar (Punjab)' },
+      { city: 'Ludhiana', tz: 'Asia/Kolkata', label: 'Ludhiana (Punjab)' },
+      { city: 'Dehradun', tz: 'Asia/Kolkata', label: 'Dehradun (Uttarakhand)' },
+      { city: 'Shimla', tz: 'Asia/Kolkata', label: 'Shimla (Himachal Pradesh)' },
+      { city: 'Jammu', tz: 'Asia/Kolkata', label: 'Jammu (J&K)' },
+      { city: 'Srinagar', tz: 'Asia/Kolkata', label: 'Srinagar (J&K)' },
+    ],
+  },
+  {
+    group: '🪔 Sacred & Pilgrimage Centers',
+    options: [
+      { city: 'Varanasi', tz: 'Asia/Kolkata', label: 'Varanasi / Kashi (Uttar Pradesh)' },
+      { city: 'Ayodhya', tz: 'Asia/Kolkata', label: 'Ayodhya (Uttar Pradesh)' },
+      { city: 'Prayagraj', tz: 'Asia/Kolkata', label: 'Prayagraj / Allahabad (UP)' },
+      { city: 'Mathura', tz: 'Asia/Kolkata', label: 'Mathura & Vrindavan (UP)' },
+      { city: 'Haridwar', tz: 'Asia/Kolkata', label: 'Haridwar (Uttarakhand)' },
+      { city: 'Rishikesh', tz: 'Asia/Kolkata', label: 'Rishikesh (Uttarakhand)' },
+      { city: 'Ujjain', tz: 'Asia/Kolkata', label: 'Ujjain (Madhya Pradesh)' },
+      { city: 'Tirupati', tz: 'Asia/Kolkata', label: 'Tirupati (Andhra Pradesh)' },
+      { city: 'Puri', tz: 'Asia/Kolkata', label: 'Puri (Odisha)' },
+      { city: 'Madurai', tz: 'Asia/Kolkata', label: 'Madurai (Tamil Nadu)' },
+      { city: 'Gaya', tz: 'Asia/Kolkata', label: 'Gaya (Bihar)' },
+    ],
+  },
+  {
+    group: '🌴 South India',
+    options: [
+      { city: 'Kochi', tz: 'Asia/Kolkata', label: 'Kochi / Cochin (Kerala)' },
+      { city: 'Thiruvananthapuram', tz: 'Asia/Kolkata', label: 'Thiruvananthapuram (Kerala)' },
+      { city: 'Kozhikode', tz: 'Asia/Kolkata', label: 'Kozhikode / Calicut (Kerala)' },
+      { city: 'Coimbatore', tz: 'Asia/Kolkata', label: 'Coimbatore (Tamil Nadu)' },
+      { city: 'Tiruchirappalli', tz: 'Asia/Kolkata', label: 'Trichy (Tamil Nadu)' },
+      { city: 'Salem', tz: 'Asia/Kolkata', label: 'Salem (Tamil Nadu)' },
+      { city: 'Visakhapatnam', tz: 'Asia/Kolkata', label: 'Visakhapatnam / Vizag (AP)' },
+      { city: 'Vijayawada', tz: 'Asia/Kolkata', label: 'Vijayawada (Andhra Pradesh)' },
+      { city: 'Warangal', tz: 'Asia/Kolkata', label: 'Warangal (Telangana)' },
+      { city: 'Mysuru', tz: 'Asia/Kolkata', label: 'Mysuru / Mysore (Karnataka)' },
+      { city: 'Mangaluru', tz: 'Asia/Kolkata', label: 'Mangaluru / Mangalore (Karnataka)' },
+      { city: 'Hubballi', tz: 'Asia/Kolkata', label: 'Hubballi-Dharwad (Karnataka)' },
+      { city: 'Belagavi', tz: 'Asia/Kolkata', label: 'Belagavi / Belgaum (Karnataka)' },
+    ],
+  },
+  {
+    group: '🏰 West & Central India',
+    options: [
+      { city: 'Surat', tz: 'Asia/Kolkata', label: 'Surat (Gujarat)' },
+      { city: 'Vadodara', tz: 'Asia/Kolkata', label: 'Vadodara / Baroda (Gujarat)' },
+      { city: 'Rajkot', tz: 'Asia/Kolkata', label: 'Rajkot (Gujarat)' },
+      { city: 'Gandhinagar', tz: 'Asia/Kolkata', label: 'Gandhinagar (Gujarat)' },
+      { city: 'Nagpur', tz: 'Asia/Kolkata', label: 'Nagpur (Maharashtra)' },
+      { city: 'Nashik', tz: 'Asia/Kolkata', label: 'Nashik (Maharashtra)' },
+      { city: 'Thane', tz: 'Asia/Kolkata', label: 'Thane & Navi Mumbai (Maharashtra)' },
+      { city: 'Chhatrapati Sambhajinagar', tz: 'Asia/Kolkata', label: 'Chhatrapati Sambhajinagar (MH)' },
+      { city: 'Indore', tz: 'Asia/Kolkata', label: 'Indore (Madhya Pradesh)' },
+      { city: 'Bhopal', tz: 'Asia/Kolkata', label: 'Bhopal (Madhya Pradesh)' },
+      { city: 'Gwalior', tz: 'Asia/Kolkata', label: 'Gwalior (Madhya Pradesh)' },
+      { city: 'Jabalpur', tz: 'Asia/Kolkata', label: 'Jabalpur (Madhya Pradesh)' },
+      { city: 'Raipur', tz: 'Asia/Kolkata', label: 'Raipur (Chhattisgarh)' },
+      { city: 'Goa', tz: 'Asia/Kolkata', label: 'Goa / Panaji' },
+    ],
+  },
+  {
+    group: '🌄 East & North-East India',
+    options: [
+      { city: 'Patna', tz: 'Asia/Kolkata', label: 'Patna (Bihar)' },
+      { city: 'Ranchi', tz: 'Asia/Kolkata', label: 'Ranchi (Jharkhand)' },
+      { city: 'Jamshedpur', tz: 'Asia/Kolkata', label: 'Jamshedpur (Jharkhand)' },
+      { city: 'Bhubaneswar', tz: 'Asia/Kolkata', label: 'Bhubaneswar (Odisha)' },
+      { city: 'Cuttack', tz: 'Asia/Kolkata', label: 'Cuttack (Odisha)' },
+      { city: 'Guwahati', tz: 'Asia/Kolkata', label: 'Guwahati (Assam)' },
+      { city: 'Siliguri', tz: 'Asia/Kolkata', label: 'Siliguri (West Bengal)' },
+      { city: 'Shillong', tz: 'Asia/Kolkata', label: 'Shillong (Meghalaya)' },
+      { city: 'Agartala', tz: 'Asia/Kolkata', label: 'Agartala (Tripura)' },
+      { city: 'Imphal', tz: 'Asia/Kolkata', label: 'Imphal (Manipur)' },
+    ],
+  },
+  {
+    group: '🌐 International Diaspora',
+    options: [
+      { city: 'Dubai', tz: 'Asia/Dubai', label: 'Dubai (UAE - GST)' },
+      { city: 'London', tz: 'Europe/London', label: 'London (UK - GMT/BST)' },
+      { city: 'Singapore', tz: 'Asia/Singapore', label: 'Singapore (SGT)' },
+      { city: 'New York', tz: 'America/New_York', label: 'New York (USA - EST/EDT)' },
+      { city: 'San Francisco', tz: 'America/Los_Angeles', label: 'San Francisco / Silicon Valley (PST/PDT)' },
+      { city: 'Toronto', tz: 'America/Toronto', label: 'Toronto (Canada - EST/EDT)' },
+      { city: 'Sydney', tz: 'Australia/Sydney', label: 'Sydney (Australia - AEST)' },
+    ],
+  },
+  {
+    group: '✏️ Other Location',
+    options: [
+      { city: 'OTHER', tz: 'Asia/Kolkata', label: '✍️ Other City / Town (Enter below)' },
+    ],
+  },
 ];
+
+const ALL_CITIES: CityOption[] = CITY_GROUPS.flatMap((g) => g.options);
 
 export default function SignupPage() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedCity, setSelectedCity] = useState(CITIES[0]);
+  const [selectedCity, setSelectedCity] = useState(ALL_CITIES[0]);
+  const [isCustomCity, setIsCustomCity] = useState(false);
+  const [customCityName, setCustomCityName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,12 +157,16 @@ export default function SignupPage() {
     setIsLoading(true);
     setError(null);
 
+    const finalCity = isCustomCity && customCityName.trim()
+      ? customCityName.trim()
+      : selectedCity.city;
+
     try {
       await api.register({
         name,
         email,
         password,
-        default_city: selectedCity.city,
+        default_city: finalCity,
         timezone: selectedCity.tz,
       });
       router.push('/planner');
@@ -157,23 +288,53 @@ export default function SignupPage() {
 
           <div>
             <label className="block text-xs font-semibold text-amber-200/80 mb-1">
-              Primary City
+              Primary City (for Local Sunrise & Rahu Kalam calculations)
             </label>
             <select
               value={selectedCity.city}
               onChange={(e) => {
-                const found = CITIES.find((c) => c.city === e.target.value);
-                if (found) setSelectedCity(found);
+                const found = ALL_CITIES.find((c) => c.city === e.target.value);
+                if (found) {
+                  setSelectedCity(found);
+                  if (found.city === 'OTHER') {
+                    setIsCustomCity(true);
+                  } else {
+                    setIsCustomCity(false);
+                  }
+                }
               }}
               className="w-full px-3.5 py-2 rounded-xl bg-[#090604] border border-amber-500/30 text-xs text-amber-100 focus:border-amber-400 focus:outline-none transition"
             >
-              {CITIES.map((c) => (
-                <option key={c.city} value={c.city} className="bg-[#120B07] text-amber-100">
-                  {c.label}
-                </option>
+              {CITY_GROUPS.map((group) => (
+                <optgroup key={group.group} label={group.group} className="bg-[#1a0e08] text-amber-300 font-semibold">
+                  {group.options.map((c) => (
+                    <option key={c.city} value={c.city} className="bg-[#120B07] text-amber-100 font-normal">
+                      {c.label}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>
+
+          {isCustomCity && (
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-amber-200/80">
+                Enter Your City or Town Name
+              </label>
+              <input
+                type="text"
+                required={isCustomCity}
+                value={customCityName}
+                onChange={(e) => setCustomCityName(e.target.value)}
+                placeholder="e.g. Aligarh, Solapur, Thrissur, Bilaspur..."
+                className="w-full px-3.5 py-2 rounded-xl bg-[#090604] border border-amber-500/40 text-xs text-amber-50 placeholder-amber-200/30 focus:border-amber-400 focus:outline-none transition shadow-[0_0_10px_rgba(245,158,11,0.15)]"
+              />
+              <p className="text-[10px] text-amber-400/60 leading-tight">
+                Our astronomical engine will automatically look up the exact coordinates for precise local solar calculations.
+              </p>
+            </div>
+          )}
 
           <button
             type="submit"
