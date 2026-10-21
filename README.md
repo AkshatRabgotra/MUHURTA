@@ -1,6 +1,15 @@
-# Muhurta Planner
+# 🪔 Vedic Muhurta Planner
+
+[![Live Web App](https://img.shields.io/badge/Live%20App-muhurta--mauve.vercel.app-ff9800?style=for-the-badge&logo=vercel&logoColor=white)](https://muhurta-mauve.vercel.app/)
+[![Telegram Bot](https://img.shields.io/badge/Telegram%20Bot-@VedicMuhurtaBot-0088cc?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/VedicMuhurtaBot)
+[![Backend API](https://img.shields.io/badge/API-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://muhurta.onrender.com/docs)
 
 > **Auspicious timing, grounded in computation.** Describe your event in plain English, and Muhurta Planner finds the best time slots using a deterministic Vedic Panchang engine — the LLM only parses your request and explains the results.
+
+### 🌐 Live Deployments
+* **Live Web Application:** [https://muhurta-mauve.vercel.app/](https://muhurta-mauve.vercel.app/)
+* **Telegram Bot Assistant:** [@VedicMuhurtaBot](https://t.me/VedicMuhurtaBot)
+* **Interactive API Documentation:** [https://muhurta.onrender.com/docs](https://muhurta.onrender.com/docs)
 
 ## Architecture
 
